@@ -5,6 +5,7 @@ import (
 	"mini-shop/user-service/internal/auth"
 	"mini-shop/user-service/internal/config"
 	"mini-shop/user-service/internal/model"
+	"mini-shop/user-service/internal/service"
 	"mini-shop/user-service/internal/utils"
 	"net/http"
 	"strconv"
@@ -14,11 +15,12 @@ import (
 )
 
 type Handler struct {
-	store model.UserStore
+	store          model.UserStore
+	balanceService service.BalanceService
 }
 
-func NewUserHandler(store model.UserStore) *Handler {
-	return &Handler{store: store}
+func NewUserHandler(store model.UserStore, balanceService service.BalanceService) *Handler {
+	return &Handler{store: store, balanceService: balanceService}
 }
 
 func (h *Handler) RegisterRoutes(router *mux.Router) {
@@ -30,6 +32,10 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/users", auth.WithJWTAuth(h.getUsers, h.store)).Methods("GET")
 	router.HandleFunc("/users/{id:[0-9]+}", auth.WithJWTAuth(h.deleteUser, h.store)).Methods("DELETE")
 	router.HandleFunc("/users", auth.WithJWTAuth(h.deleteAllUsers, h.store)).Methods("DELETE")
+
+	router.HandleFunc("/balance/{id:[0-9]+}", h.handleGetBalance).Methods("GET")
+	router.HandleFunc("/balance/{id:[0-9]+}/add", h.handleAddBalance).Methods("POST")
+	router.HandleFunc("/balance/{id:[0-9]+}/withdraw", h.handleWithdrawBalance).Methods("POST")
 }
 
 func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
@@ -121,7 +127,6 @@ func (h *Handler) handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Отправляем токены в ответ
 	utils.WriteJSON(w, http.StatusCreated, map[string]string{
 		"accessToken":  accessToken,
 		"refreshToken": refreshToken,
@@ -171,4 +176,83 @@ func (h *Handler) deleteAllUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.WriteJSON(w, http.StatusOK, map[string]string{"message": "all users deleted"})
+}
+
+func (h *Handler) handleGetBalance(w http.ResponseWriter, r *http.Request) {
+	idStr := mux.Vars(r)["id"]
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid user ID"))
+		return
+	}
+
+	balance, err := h.balanceService.GetBalance(id)
+	if err != nil {
+		utils.WriteError(w, http.StatusNotFound, err)
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK, map[string]float64{"balance": balance})
+}
+
+func (h *Handler) handleAddBalance(w http.ResponseWriter, r *http.Request) {
+	idStr := mux.Vars(r)["id"]
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid user ID"))
+		return
+	}
+
+	var payload struct {
+		Amount float64 `json:"amount"`
+	}
+
+	if err := utils.ParseJSON(r, &payload); err != nil {
+		utils.WriteError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	if payload.Amount <= 0 {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("amount must be positive"))
+		return
+	}
+
+	balance, err := h.balanceService.AddBalance(id, payload.Amount)
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK, map[string]float64{"balance": balance})
+}
+
+func (h *Handler) handleWithdrawBalance(w http.ResponseWriter, r *http.Request) {
+	idStr := mux.Vars(r)["id"]
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid user ID"))
+		return
+	}
+
+	var payload struct {
+		Amount float64 `json:"amount"`
+	}
+
+	if err := utils.ParseJSON(r, &payload); err != nil {
+		utils.WriteError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	if payload.Amount <= 0 {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("amount must be positive"))
+		return
+	}
+
+	balance, err := h.balanceService.Withdraw(id, payload.Amount)
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK, map[string]float64{"balance": balance})
 }

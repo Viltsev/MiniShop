@@ -7,6 +7,7 @@ import (
 
 	"mini-shop/user-service/internal/handler"
 	"mini-shop/user-service/internal/repository"
+	"mini-shop/user-service/internal/service"
 
 	"github.com/gorilla/mux"
 )
@@ -29,7 +30,8 @@ func (s *APIServer) Run() error {
 	subrouter := router.PathPrefix("/api/v1").Subrouter()
 
 	userStore := repository.NewStore(s.db)
-	userHandler := handler.NewUserHandler(userStore)
+	balanceService := service.NewBalanceService(userStore)
+	userHandler := handler.NewUserHandler(userStore, *balanceService)
 	userHandler.RegisterRoutes(subrouter)
 
 	log.Println("Server starts on http://localhost:8080")

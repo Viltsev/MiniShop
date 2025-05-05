@@ -19,5 +19,8 @@ migrate-up:
 migrate-down:
 	./scripts/migrate.sh down
 
+migrate-balance:
+	migrate create -ext sql -dir migrations add_balance_to_users
+
 test:
 	go test ./... 

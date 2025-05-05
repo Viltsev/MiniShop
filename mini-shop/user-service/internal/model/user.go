@@ -11,6 +11,7 @@ type UserStore interface {
 	CreateUser(User) error
 	DeleteUser(id int) error
 	DeleteAllUsers() error
+	UpdateUser(user *User) error
 }
 
 type User struct {
@@ -19,5 +20,6 @@ type User struct {
 	LastName  string    `json:"lastName"`
 	Email     string    `json:"email"`
 	Password  string    `json:"-"`
+	Balance   float64   `json:"balance"`
 	CreatedAt time.Time `json:"createdAt"`
 }

@@ -23,6 +23,7 @@ func scanRowsIntoUser(rows *sql.Rows) (*model.User, error) {
 		&user.LastName,
 		&user.Email,
 		&user.Password,
+		&user.Balance,
 		&user.CreatedAt,
 	)
 	if err != nil {
@@ -33,7 +34,7 @@ func scanRowsIntoUser(rows *sql.Rows) (*model.User, error) {
 }
 
 func (s *Store) GetUserByEmail(email string) (*model.User, error) {
-	rows, err := s.db.Query("SELECT id, firstName, lastName, email, password, createdAt FROM users WHERE email = $1", email)
+	rows, err := s.db.Query("SELECT id, firstName, lastName, email, password, balance, createdAt FROM users WHERE email = $1", email)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +56,7 @@ func (s *Store) GetUserByEmail(email string) (*model.User, error) {
 }
 
 func (s *Store) GetUserByID(id int) (*model.User, error) {
-	rows, err := s.db.Query("SELECT id, firstName, lastName, email, password, createdAt FROM users WHERE id = $1", id)
+	rows, err := s.db.Query("SELECT id, firstName, lastName, email, password, balance, createdAt FROM users WHERE id = $1", id)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +94,7 @@ func (s *Store) CreateUser(user model.User) error {
 
 func (s *Store) GetUsers() ([]model.User, error) {
 	var users []model.User
-	rows, err := s.db.Query("SELECT id, firstName, lastName, email, password, createdAt FROM users")
+	rows, err := s.db.Query("SELECT id, firstName, lastName, email, password, balance, createdAt FROM users")
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +102,7 @@ func (s *Store) GetUsers() ([]model.User, error) {
 
 	for rows.Next() {
 		var user model.User
-		if err := rows.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.Password, &user.CreatedAt); err != nil {
+		if err := rows.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.Password, &user.Balance, &user.CreatedAt); err != nil {
 			return nil, err
 		}
 		users = append(users, user)
@@ -121,5 +122,20 @@ func (s *Store) DeleteUser(id int) error {
 
 func (s *Store) DeleteAllUsers() error {
 	_, err := s.db.Exec("DELETE FROM users")
+	return err
+}
+
+func (s *Store) UpdateUser(user *model.User) error {
+	_, err := s.db.Exec(
+		"UPDATE users SET firstName=$1, lastName=$2, email=$3, password=$4, balance=$5, createdAt=$6 WHERE id=$7",
+		user.FirstName,
+		user.LastName,
+		user.Email,
+		user.Password,
+		user.Balance,
+		user.CreatedAt,
+		user.ID,
+	)
+
 	return err
 }

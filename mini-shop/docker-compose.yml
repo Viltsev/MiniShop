@@ -1,6 +1,15 @@
 version: '3.8'
 
 services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+
   user-db:
     image: postgres:15
     restart: always
@@ -56,11 +65,13 @@ services:
       DB_NAME: order-service-db
       DB_SSL_MODE: disable
       JWT_SECRET: your_jwt_secret
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
     ports:
       - "8081:8081"
     depends_on:
       - order-db
-    entrypoint: ["./wait-for-it.sh", "order-db:5433", "--", "./main"]
+      - rabbitmq
+    entrypoint: ["./wait-for-it.sh", "order-db:5433", "--", "./wait-for-it.sh", "rabbitmq:5672", "--", "./main"]
 
 volumes:
   user_db_data:

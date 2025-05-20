@@ -7,6 +7,7 @@ import (
 	"github.com/Viltsev/minishop/order-service/internal/app"
 	"github.com/Viltsev/minishop/order-service/internal/config"
 	"github.com/Viltsev/minishop/order-service/internal/database"
+	"github.com/Viltsev/minishop/order-service/internal/messaging"
 )
 
 func main() {
@@ -24,7 +25,6 @@ func main() {
 	log.Println("Connecting to DB...")
 	db, err := database.NewPostgresStorage(cfg)
 	if err != nil {
-		log.Fatal(err)
 		log.Fatal("DB connection failed:", err)
 	}
 	log.Println("DB connection established")
@@ -37,12 +37,21 @@ func main() {
 	}
 	log.Println("Migrations applied successfully.")
 
+	log.Println("Connecting to RabbitMQ...")
+	rabbitURL := "amqp://guest:guest@rabbitmq:5672/"
+	rabbitMQ, err := messaging.NewRabbitMQ(rabbitURL, "orders_exchange")
+	if err != nil {
+		log.Fatal("Failed to connect to RabbitMQ:", err)
+	}
+	defer rabbitMQ.Close()
+	log.Println("Connected to RabbitMQ")
+
 	log.Println("Starting API server...")
-	server := app.NewAPIServer(":8081", db)
+	server := app.NewAPIServer(":8081", db, rabbitMQ)
 	if err := server.Run(); err != nil {
-		log.Fatal(err)
 		log.Fatal("API server failed:", err)
 	}
+
 	log.Print("server has started")
 }
 

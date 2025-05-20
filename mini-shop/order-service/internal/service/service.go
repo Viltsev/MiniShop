@@ -1,18 +1,51 @@
 package service
 
-import "github.com/Viltsev/minishop/order-service/internal/model"
+import (
+	"encoding/json"
+	"fmt"
+
+	"github.com/Viltsev/minishop/order-service/internal/messaging"
+	"github.com/Viltsev/minishop/order-service/internal/model"
+)
 
 type OrderService struct {
-	store model.OrderStore
+	store    model.OrderStore
+	rabbitMQ *messaging.RabbitMQ
 }
 
-func NewOrderService(store model.OrderStore) *OrderService {
-	return &OrderService{store: store}
+func NewOrderService(store model.OrderStore, rabbitMQ *messaging.RabbitMQ) *OrderService {
+	return &OrderService{
+		store:    store,
+		rabbitMQ: rabbitMQ,
+	}
 }
 
 func (s *OrderService) CreateOrder(order model.Order) (*model.Order, error) {
-	order.Status = "pending"
-	return s.store.CreateOrder(order)
+	order.Status = "created"
+	createdOrder, err := s.store.CreateOrder(order)
+	if err != nil {
+		return nil, err
+	}
+
+	// Публикуем событие OrderCreated
+	event := map[string]interface{}{
+		"type":    "OrderCreated",
+		"orderID": createdOrder.ID,
+		"userID":  createdOrder.UserID,
+		"amount":  createdOrder.Amount,
+	}
+
+	body, err := json.Marshal(event)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal event: %w", err)
+	}
+
+	err = s.rabbitMQ.Publish("order.created", body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to publish event: %w", err)
+	}
+
+	return createdOrder, nil
 }
 
 func (s *OrderService) GetOrderByID(id int) (*model.Order, error) {

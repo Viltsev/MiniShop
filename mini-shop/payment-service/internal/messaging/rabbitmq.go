@@ -2,64 +2,56 @@ package messaging
 
 import (
 	"log"
-	"time"
 
 	"github.com/streadway/amqp"
 )
 
 type RabbitMQ struct {
-	conn     *amqp.Connection
-	channel  *amqp.Channel
-	exchange string
+	conn    *amqp.Connection
+	channel *amqp.Channel
 }
 
-func NewRabbitMQ(amqpURL, exchange string) (*RabbitMQ, error) {
-	conn, err := amqp.Dial(amqpURL)
+func NewRabbitMQ(url string) (*RabbitMQ, error) {
+	conn, err := amqp.Dial(url)
 	if err != nil {
 		return nil, err
 	}
 
 	ch, err := conn.Channel()
 	if err != nil {
-		conn.Close()
-		return nil, err
-	}
-
-	err = ch.ExchangeDeclare(
-		exchange,
-		"topic",
-		true,
-		false,
-		false,
-		false,
-		nil,
-	)
-	if err != nil {
-		ch.Close()
-		conn.Close()
 		return nil, err
 	}
 
 	return &RabbitMQ{
-		conn:     conn,
-		channel:  ch,
-		exchange: exchange,
+		conn:    conn,
+		channel: ch,
 	}, nil
 }
 
-func (r *RabbitMQ) Publish(routingKey string, body []byte) error {
-	log.Printf("Publishing message to exchange %s with routing key %s: %s", r.exchange, routingKey, string(body))
-	return r.channel.Publish(
-		r.exchange,
-		routingKey,
-		false,
-		false,
+func (r *RabbitMQ) Publish(queue string, body []byte) error {
+	err := r.channel.ExchangeDeclare(
+		"minishop", // exchange
+		"topic",    // type
+		true,       // durable
+		false,      // auto-deleted
+		false,      // internal
+		false,      // no-wait
+		nil,        // args
+	)
+	if err != nil {
+		return err
+	}
+
+	err = r.channel.Publish(
+		"minishop", // exchange
+		queue,      // routing key
+		false,      // mandatory
+		false,      // immediate
 		amqp.Publishing{
 			ContentType: "application/json",
 			Body:        body,
-			Timestamp:   time.Now(),
-		},
-	)
+		})
+	return err
 }
 
 func (r *RabbitMQ) Consume(queue string, handler func([]byte)) error {
@@ -107,6 +99,10 @@ func (r *RabbitMQ) Consume(queue string, handler func([]byte)) error {
 }
 
 func (r *RabbitMQ) Close() {
-	r.channel.Close()
-	r.conn.Close()
+	if r.channel != nil {
+		r.channel.Close()
+	}
+	if r.conn != nil {
+		r.conn.Close()
+	}
 }

@@ -51,7 +51,7 @@ func (h *Handler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 		Status: "created",
 	}
 
-	createdOrder, err := h.store.CreateOrder(order)
+	createdOrder, err := h.service.CreateOrder(order)
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("failed to create order: %v", err))
 		return

@@ -25,8 +25,8 @@ migrate-balance:
 migrate-order:
 	migrate create -ext sql -dir ./order-service/migrations orders
 
-migrate-outbox:
-	migrate create -ext sql -dir ./order-service/migrations outbox
+migrate-payment:
+	migrate create -ext sql -dir ./payment-service/migrations payments
 
 test:
 	go test ./... 

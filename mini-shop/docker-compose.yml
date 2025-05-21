@@ -73,7 +73,42 @@ services:
       - rabbitmq
     entrypoint: ["./wait-for-it.sh", "order-db:5433", "--", "./wait-for-it.sh", "rabbitmq:5672", "--", "./main"]
 
+  payment-service:
+    build:
+      context: ./payment-service
+      dockerfile: Dockerfile
+    environment:
+      DB_HOST: payment-db
+      DB_PORT: 5434
+      DB_USER: user
+      DB_PASSWORD: 1234
+      DB_NAME: payment-service-db
+      DB_SSL_MODE: disable
+      JWT_SECRET: your_jwt_secret
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+    ports:
+      - "8082:8082"
+    depends_on:
+      - payment-db
+      - rabbitmq
+    entrypoint: ["./wait-for-it.sh", "payment-db:5434", "--", "./wait-for-it.sh", "rabbitmq:5672", "--", "./main"]
+
+  payment-db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: payment-service-db
+      PGPORT: 5434
+    volumes:
+      - payment_db_data:/var/lib/postgresql/data
+    ports:
+      - "5434:5434"
+
 volumes:
   user_db_data:
   order_db_data:
+  payment_db_data:
+
 

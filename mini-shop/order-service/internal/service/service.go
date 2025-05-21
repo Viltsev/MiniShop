@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 
 	"github.com/Viltsev/minishop/order-service/internal/messaging"
 	"github.com/Viltsev/minishop/order-service/internal/model"
@@ -27,6 +28,8 @@ func (s *OrderService) CreateOrder(order model.Order) (*model.Order, error) {
 		return nil, err
 	}
 
+	log.Printf("Create order with amount %s and id %s", createdOrder.Amount, createdOrder.ID)
+
 	// Публикуем событие OrderCreated
 	event := map[string]interface{}{
 		"type":    "OrderCreated",
@@ -34,6 +37,8 @@ func (s *OrderService) CreateOrder(order model.Order) (*model.Order, error) {
 		"userID":  createdOrder.UserID,
 		"amount":  createdOrder.Amount,
 	}
+
+	log.Printf("Create event %s", event)
 
 	body, err := json.Marshal(event)
 	if err != nil {

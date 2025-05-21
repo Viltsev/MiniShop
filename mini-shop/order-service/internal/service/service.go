@@ -28,13 +28,14 @@ func (s *OrderService) CreateOrder(order model.Order) (*model.Order, error) {
 		return nil, err
 	}
 
-	log.Printf("Create order with amount %s and id %s", createdOrder.Amount, createdOrder.ID)
+	log.Printf("Create order with amount %f and id %d", createdOrder.Amount, createdOrder.ID)
 
 	// Публикуем событие OrderCreated
 	event := map[string]interface{}{
 		"type":    "OrderCreated",
 		"orderID": createdOrder.ID,
 		"userID":  createdOrder.UserID,
+		"email":   createdOrder.Email,
 		"amount":  createdOrder.Amount,
 	}
 

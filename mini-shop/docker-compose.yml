@@ -93,6 +93,18 @@ services:
       - rabbitmq
     entrypoint: ["./wait-for-it.sh", "payment-db:5434", "--", "./wait-for-it.sh", "rabbitmq:5672", "--", "./main"]
 
+  notification-service:
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+    environment:
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+    ports:
+      - "8083:8083"
+    depends_on:
+      - rabbitmq
+    entrypoint: ["./wait-for-it.sh", "rabbitmq:5672", "--", "./main"]
+
   payment-db:
     image: postgres:15
     restart: always

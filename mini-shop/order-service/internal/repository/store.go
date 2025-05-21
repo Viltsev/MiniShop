@@ -22,6 +22,7 @@ func scanRowsIntoOrder(rows *sql.Rows) (*model.Order, error) {
 	err := rows.Scan(
 		&user.ID,
 		&user.UserID,
+		&user.Email,
 		&user.Amount,
 		&user.Status,
 		&user.CreatedAt,
@@ -34,8 +35,8 @@ func scanRowsIntoOrder(rows *sql.Rows) (*model.Order, error) {
 }
 
 func (s *Store) CreateOrder(order model.Order) (*model.Order, error) {
-	query := `INSERT INTO orders (userID, amount, status, createdAt) VALUES ($1, $2, $3, $4) RETURNING id`
-	err := s.db.QueryRow(query, order.UserID, order.Amount, order.Status, time.Now()).Scan(&order.ID)
+	query := `INSERT INTO orders (userID, email, amount, status, createdAt) VALUES ($1, $2, $3, $4, $5) RETURNING id`
+	err := s.db.QueryRow(query, order.UserID, order.Email, order.Amount, order.Status, time.Now()).Scan(&order.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -44,12 +45,12 @@ func (s *Store) CreateOrder(order model.Order) (*model.Order, error) {
 }
 
 func (s *Store) GetOrderByID(id int) (*model.Order, error) {
-	query := `SELECT id, userID, amount, status, createdAt FROM orders WHERE id = $1`
+	query := `SELECT id, userID, email, amount, status, createdAt FROM orders WHERE id = $1`
 
 	row := s.db.QueryRow(query, id)
 
 	order := &model.Order{}
-	err := row.Scan(&order.ID, &order.UserID, &order.Amount, &order.Status, &order.CreatedAt)
+	err := row.Scan(&order.ID, &order.UserID, &order.Email, &order.Amount, &order.Status, &order.CreatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -80,7 +81,7 @@ func (s *Store) UpdateStatus(id int, status string) error {
 }
 
 func (s *Store) ListOrdersByUser(userID string) ([]model.Order, error) {
-	query := `SELECT id, userID, amount, status, createdAt FROM orders WHERE userID = $1`
+	query := `SELECT id, userID, email, amount, status, createdAt FROM orders WHERE userID = $1`
 
 	rows, err := s.db.Query(query, userID)
 	if err != nil {

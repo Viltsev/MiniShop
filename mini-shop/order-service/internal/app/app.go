@@ -39,7 +39,7 @@ func (s *APIServer) Run() error {
 
 	go func() {
 		if err := s.startPaymentEventListener(orderStore); err != nil {
-			log.Fatalf("failed to start order.created listener: %v", err)
+			log.Fatalf("failed to start order service listener: %v", err)
 		}
 	}()
 

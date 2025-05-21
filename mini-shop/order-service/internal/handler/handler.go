@@ -34,8 +34,10 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 func (h *Handler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	log.Println("Received request to create order")
 	userID := r.Context().Value(auth.UserKey).(int)
+	email := r.Context().Value(auth.EmailKey).(string)
 
 	log.Println("user id ", userID)
+	log.Println("user email ", email)
 
 	var orderRequest model.OrderRequest
 	if err := utils.ParseJSON(r, &orderRequest); err != nil {
@@ -47,6 +49,7 @@ func (h *Handler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 
 	order := model.Order{
 		UserID: userID,
+		Email:  email,
 		Amount: orderRequest.Amount,
 		Status: "created",
 	}

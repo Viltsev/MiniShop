@@ -16,7 +16,10 @@ import (
 
 type contextKey string
 
-const UserKey contextKey = "userID"
+const (
+	UserKey  contextKey = "userID"
+	EmailKey contextKey = "email"
+)
 
 func WithJWTAuth(handlerFunc http.HandlerFunc, store model.OrderStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -24,7 +27,7 @@ func WithJWTAuth(handlerFunc http.HandlerFunc, store model.OrderStore) http.Hand
 		tokenString := utils.GetTokenFromRequest(r)
 
 		// Валидируем токен и извлекаем userID
-		userID, err := GetUserIDFromToken(tokenString)
+		userID, email, err := GetUserIDFromToken(tokenString)
 		if err != nil {
 			log.Printf("failed to validate token: %v", err)
 			permissionDenied(w)
@@ -34,6 +37,7 @@ func WithJWTAuth(handlerFunc http.HandlerFunc, store model.OrderStore) http.Hand
 		// Сохраняем userID в контексте запроса
 		ctx := r.Context()
 		ctx = context.WithValue(ctx, UserKey, userID)
+		ctx = context.WithValue(ctx, EmailKey, email)
 		r = r.WithContext(ctx)
 
 		// Вызываем основной обработчик
@@ -42,7 +46,7 @@ func WithJWTAuth(handlerFunc http.HandlerFunc, store model.OrderStore) http.Hand
 }
 
 // GetUserIDFromToken извлекает userID из JWT токена
-func GetUserIDFromToken(tokenString string) (int, error) {
+func GetUserIDFromToken(tokenString string) (int, string, error) {
 	// Проверяем, начинается ли токен с "Bearer " и удаляем это слово, если оно есть
 	tokenString = strings.TrimPrefix(tokenString, "Bearer ")
 
@@ -50,34 +54,40 @@ func GetUserIDFromToken(tokenString string) (int, error) {
 	token, err := validateJWT(tokenString)
 	if err != nil {
 		log.Printf("failed to validate token: %v", err)
-		return 0, fmt.Errorf("invalid token: %w", err)
+		return 0, "", fmt.Errorf("invalid token: %w", err)
 	}
 
 	// Проверяем валидность токена
 	if !token.Valid {
 		log.Println("invalid token")
-		return 0, fmt.Errorf("invalid token")
+		return 0, "", fmt.Errorf("invalid token")
 	}
 
 	// Извлекаем данные из токена (claims)
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		return 0, fmt.Errorf("invalid token claims")
+		return 0, "", fmt.Errorf("invalid token claims")
 	}
 
 	// Получаем userID из claims
 	userIDStr, ok := claims["userID"].(string)
 	if !ok {
-		return 0, fmt.Errorf("userID not found in token claims")
+		return 0, "", fmt.Errorf("userID not found in token claims")
+	}
+
+	// Получение email из claims
+	email, ok := claims["email"].(string)
+	if !ok {
+		return 0, "", fmt.Errorf("email not found in token claims")
 	}
 
 	// Преобразуем userID в целое число
 	userID, err := strconv.Atoi(userIDStr)
 	if err != nil {
-		return 0, fmt.Errorf("failed to convert userID to int: %w", err)
+		return 0, "", fmt.Errorf("failed to convert userID to int: %w", err)
 	}
 
-	return userID, nil
+	return userID, email, nil
 }
 
 func validateJWT(tokenString string) (*jwt.Token, error) {

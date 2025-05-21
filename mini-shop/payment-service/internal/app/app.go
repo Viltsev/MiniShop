@@ -39,7 +39,6 @@ func (s *APIServer) Run() error {
 	paymentHandler := handler.NewPaymentHandler(paymentStore, paymentService)
 	paymentHandler.RegisterRoutes(subrouter)
 
-	// Запускаем слушатель сообщений с order.created
 	go func() {
 		if err := s.startOrderCreatedListener(paymentService); err != nil {
 			log.Fatalf("failed to start order.created listener: %v", err)
@@ -67,6 +66,7 @@ func (s *APIServer) startOrderCreatedListener(paymentService *service.PaymentSer
 		payment := model.Payment{
 			OrderID: orderEvent.OrderID,
 			UserID:  orderEvent.UserID,
+			Email:   orderEvent.Email,
 			Amount:  orderEvent.Amount,
 			Status:  "pending",
 		}

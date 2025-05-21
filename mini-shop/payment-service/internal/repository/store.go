@@ -23,6 +23,7 @@ func scanRowsIntoPayment(rows *sql.Rows) (*model.Payment, error) {
 		&payment.ID,
 		&payment.OrderID,
 		&payment.UserID,
+		&payment.Email,
 		&payment.Amount,
 		&payment.Status,
 		&payment.CreatedAt,
@@ -35,9 +36,9 @@ func scanRowsIntoPayment(rows *sql.Rows) (*model.Payment, error) {
 }
 
 func (s *Store) CreatePayment(payment model.Payment) (*model.Payment, error) {
-	query := `INSERT INTO payments (orderID, userID, amount, status, createdAt) VALUES ($1, $2, $3, $4, $5) RETURNING id`
+	query := `INSERT INTO payments (orderID, userID, email, amount, status, createdAt) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`
 	now := time.Now()
-	err := s.db.QueryRow(query, payment.OrderID, payment.UserID, payment.Amount, payment.Status, now).Scan(&payment.ID)
+	err := s.db.QueryRow(query, payment.OrderID, payment.UserID, payment.Email, payment.Amount, payment.Status, now).Scan(&payment.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -46,12 +47,12 @@ func (s *Store) CreatePayment(payment model.Payment) (*model.Payment, error) {
 }
 
 func (s *Store) GetPaymentByID(id int) (*model.Payment, error) {
-	query := `SELECT id, orderID, userID, amount, status, createdAt FROM payments WHERE id = $1`
+	query := `SELECT id, orderID, userID, email, amount, status, createdAt FROM payments WHERE id = $1`
 
 	row := s.db.QueryRow(query, id)
 
 	payment := &model.Payment{}
-	err := row.Scan(&payment.ID, &payment.OrderID, &payment.UserID, &payment.Amount, &payment.Status, &payment.CreatedAt)
+	err := row.Scan(&payment.ID, &payment.OrderID, &payment.UserID, &payment.Email, &payment.Amount, &payment.Status, &payment.CreatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -82,7 +83,7 @@ func (s *Store) UpdatePaymentStatus(id int, status string) error {
 }
 
 func (s *Store) ListPaymentsByUser(userID int) ([]model.Payment, error) {
-	query := `SELECT id, orderID, userID, amount, status, createdAt FROM payments WHERE userID = $1`
+	query := `SELECT id, orderID, userID, email, amount, status, createdAt FROM payments WHERE userID = $1`
 
 	rows, err := s.db.Query(query, userID)
 	if err != nil {

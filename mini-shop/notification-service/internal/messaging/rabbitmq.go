@@ -13,8 +13,8 @@ type RabbitMQ struct {
 	exchange string
 }
 
-func NewRabbitMQ(amqpURL, exchange string) (*RabbitMQ, error) {
-	conn, err := amqp.Dial(amqpURL)
+func NewRabbitMQ(ampqURL, exchange string) (*RabbitMQ, error) {
+	conn, err := amqp.Dial(ampqURL)
 	if err != nil {
 		return nil, err
 	}
@@ -34,6 +34,7 @@ func NewRabbitMQ(amqpURL, exchange string) (*RabbitMQ, error) {
 		false,
 		nil,
 	)
+
 	if err != nil {
 		ch.Close()
 		conn.Close()
@@ -62,29 +63,26 @@ func (r *RabbitMQ) Publish(routingKey string, body []byte) error {
 	)
 }
 
-func (r *RabbitMQ) Consume(bindingKey string, handler func([]byte)) error {
-	log.Printf("[RabbitMQ] Declaring exchange '%s' for binding key: %s", r.exchange, bindingKey)
-
-	// Создаем уникальную очередь с рандомным именем (server-named queue)
-	q, err := r.channel.QueueDeclare(
-		"",    // пустая строка - сервер сгенерирует имя
-		true,  // durable
-		false, // delete when unused
-		true,  // exclusive (очередь удалится, когда коннект закроется)
-		false,
-		nil,
+func (r *RabbitMQ) Consume(queue string, handler func([]byte)) error {
+	log.Printf("[RabbitMQ] Declaring exchange 'minishop' for queue: %s", queue)
+	err := r.channel.ExchangeDeclare(
+		"minishop", "topic", true, false, false, false, nil,
 	)
 	if err != nil {
 		return err
 	}
 
-	log.Printf("[RabbitMQ] Binding queue '%s' to exchange '%s' with routing key '%s'", q.Name, r.exchange, bindingKey)
+	log.Printf("[RabbitMQ] Declaring queue: %s", queue)
+	q, err := r.channel.QueueDeclare(
+		queue, true, false, false, false, nil,
+	)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("[RabbitMQ] Binding queue '%s' to exchange 'minishop' with routing key '%s'", q.Name, queue)
 	err = r.channel.QueueBind(
-		q.Name,
-		bindingKey,
-		r.exchange,
-		false,
-		nil,
+		q.Name, queue, "minishop", false, nil,
 	)
 	if err != nil {
 		return err
@@ -100,12 +98,12 @@ func (r *RabbitMQ) Consume(bindingKey string, handler func([]byte)) error {
 
 	go func() {
 		for msg := range msgs {
-			log.Printf("[RabbitMQ] Message received on queue %s: %s", q.Name, string(msg.Body))
+			log.Printf("[RabbitMQ] Message received on queue %s: %s", queue, string(msg.Body))
 			handler(msg.Body)
 		}
 	}()
 
-	log.Printf("[RabbitMQ] Waiting for messages on queue: %s", q.Name)
+	log.Printf("[RabbitMQ] Waiting for messages on queue: %s", queue)
 	return nil
 }
 

@@ -13,6 +13,7 @@ type Payment struct {
 	ID        int       `db:"id"`
 	OrderID   int       `db:"order_id"`
 	UserID    int       `db:"user_id"`
+	Email     string    `db:"email"`
 	Amount    float64   `db:"amount"`
 	Status    string    `db:"status"`
 	CreatedAt time.Time `db:"created_at"`
@@ -30,5 +31,6 @@ type OutboxEvent struct {
 type OrderCreatedEvent struct {
 	OrderID int     `json:"orderID"`
 	UserID  int     `json:"userID"`
+	Email   string  `json:"email"`
 	Amount  float64 `json:"amount"`
 }

@@ -28,5 +28,11 @@ migrate-order:
 migrate-payment:
 	migrate create -ext sql -dir ./payment-service/migrations payments
 
+migrate-order-email:
+	migrate create -ext sql -dir ./order-service/migrations order_email
+
+migrate-payment-email:
+	migrate create -ext sql -dir ./payment-service/migrations payments_email
+
 test:
 	go test ./... 

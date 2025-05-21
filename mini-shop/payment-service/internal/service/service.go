@@ -32,6 +32,7 @@ func (s *PaymentService) ProcessPayment(payment model.Payment, userService *User
 			"type":    "PaymentFailed",
 			"orderID": payment.OrderID,
 			"userID":  payment.UserID,
+			"email":   payment.Email,
 			"amount":  payment.Amount,
 			"error":   err.Error(),
 		}
@@ -52,6 +53,7 @@ func (s *PaymentService) ProcessPayment(payment model.Payment, userService *User
 		"type":    "PaymentCompleted",
 		"orderID": createdPayment.OrderID,
 		"userID":  createdPayment.UserID,
+		"email":   createdPayment.Email,
 		"amount":  createdPayment.Amount,
 	}
 	body, _ := json.Marshal(event)
@@ -59,22 +61,6 @@ func (s *PaymentService) ProcessPayment(payment model.Payment, userService *User
 
 	log.Printf("Средства сняты")
 	return createdPayment, nil
-}
-
-func (s *PaymentService) publishPaymentEvent(payment *model.Payment) error {
-	event := map[string]interface{}{
-		"type":    "PaymentCompleted",
-		"orderID": payment.OrderID,
-		"userID":  payment.UserID,
-		"amount":  payment.Amount,
-	}
-
-	body, err := json.Marshal(event)
-	if err != nil {
-		return fmt.Errorf("failed to marshal event: %w", err)
-	}
-
-	return s.rabbitMQ.Publish("payment.completed", body)
 }
 
 func (s *PaymentService) GetPaymentByID(id int) (*model.Payment, error) {
